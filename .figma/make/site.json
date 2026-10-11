@@ -1,0 +1,10 @@
+{
+  "description": "This interactive web application enables users to seamlessly browse and purchase tickets for events on both mobile and desktop devices, enhancing user experience.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
