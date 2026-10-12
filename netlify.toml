@@ -1,0 +1,26 @@
+# Cinetix — Netlify configuration
+#
+# Netlify auto-detects pnpm-lock.yaml and installs with pnpm, so `npm ci`
+# (which would fail without a package-lock.json) is never run.
+#
+# There is no client-side router: every screen is driven by React state
+# (`type Screen` in src/App.tsx), so no SPA redirect rule is needed.
+
+[build]
+  command = "pnpm build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Long-lived caching for hashed assets, no caching for the HTML shell.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
