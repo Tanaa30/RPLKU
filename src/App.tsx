@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
 
 const A = "/assets";
 
@@ -48,7 +48,42 @@ const movies: Movie[] = [
   { id: "reawaken-man", title: "Reawaken Man: The Red", image: `${A}/reawaken-man.jpg`, tag: "PRE-SALE", chain: "Cinepolis", genre: "Aksi", rating: "R 17+", duration: "1 jam 58 menit", synopsis: "Seorang pria bangkit dari kematian dengan kekuatan mematikan dan mengejar keadilan di kota yang penuh rahasia." },
 ];
 
+// Lookup aman untuk data banner promosi: kalau id salah ketik, error-nya
+// jelas saat build daripada diam-diam jadi <img src="undefined">.
+function promoMovie(id: string): Movie {
+  const movie = movies.find((item) => item.id === id);
+  if (!movie) throw new Error(`Film promo tidak ditemukan: ${id}`);
+  return movie;
+}
+
 const TICKET_PRICE = 20000;
+
+// Banner promosi di halaman Home. Tiap slide punya copywriting sendiri,
+// tapi filmnya diambil dari daftar `movies` lewat `promoMovie()` supaya
+// poster dan data film selalu mengikuti sumber yang sama.
+const promos: { movie: Movie; pill: string; headline: string[]; blurb: string; cta: string }[] = [
+  {
+    movie: promoMovie("tunggu-aku-sukses-nanti"),
+    pill: "PRE-SALE SUDAH DIBUKA",
+    headline: ["Cerita yang dekat,", "di layar yang besar."],
+    blurb: "Tunggu Aku Sukses Nanti segera tayang. Amankan kursimu sekarang.",
+    cta: "Lihat jadwal",
+  },
+  {
+    movie: promoMovie("spiderman-brand-new-day"),
+    pill: "PRE-SALE MULAI HARI INI",
+    headline: ["Semua berubah,", "di hari yang baru."],
+    blurb: "Peter Parker memulai lembaran baru dengan musuh yang tak lagi ia kenali.",
+    cta: "Pesan tiket",
+  },
+  {
+    movie: promoMovie("frozen-3"),
+    pill: "TAYANG PERDANA",
+    headline: ["Dingin kembali,", "misteri makin dalam."],
+    blurb: "Ancaman baru dari utara memaksa Anna dan Elsa menghadapi kekuatan tua Arendelle.",
+    cta: "Pesan tiket",
+  },
+];
 const SERVICE_FEE = 2000;
 const TICKETS_KEY = "tix-tickets";
 const REVIEWS_KEY = "tix-reviews";
@@ -308,6 +343,142 @@ function Shell({
   );
 }
 
+// Banner promosi yang bisa digeser (drag / swipe) ke kanan-kiri, plus
+// tombol panah dan titik navigasi. Gerakannya memakai Pointer Events sehingga
+// mouse dan sentuhan layar memakai jalur kode yang sama.
+function PromoBanner({ openDetail }: { openDetail: (movie: Movie) => void }) {
+  const [index, setIndex] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef(0);
+  const draggingRef = useRef(false);
+
+  const count = promos.length;
+  const widthRef = useRef(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const goTo = (next: number) => {
+    // Wrap-around: geser ke kanan di slide terakhir kembali ke awal.
+    setIndex((next + count) % count);
+    setDragOffset(0);
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    // Hanya tombol kiri mouse; penarikan tidak mengganggu klik biasa.
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    draggingRef.current = true;
+    startX.current = event.clientX;
+    widthRef.current = trackRef.current?.offsetWidth ?? 0;
+    setDragging(true);
+    // Bisa melempar NotFoundError kalau pointer sudah tidak aktif (mis. sudah
+    // dilepas atau elemennya sudah tercabut). Aman diabaikan: geseran tetap
+    // jalan, hanya kehilangan capture.
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* no-op */
+    }
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    setDragOffset(event.clientX - startX.current);
+  };
+
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    const delta = event.clientX - startX.current;
+    const width = widthRef.current || 1;
+    // Butuh geseran minimal 20% lebar banner supaya klik biasa tidak
+    // ikut terbaca sebagai geseran.
+    const threshold = width * 0.2;
+    setDragOffset(0);
+    if (delta <= -threshold) setIndex((index + 1) % count);
+    else if (delta >= threshold) setIndex((index - 1 + count) % count);
+  };
+
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      goTo(index - 1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      goTo(index + 1);
+    }
+  };
+
+  return (
+    <section className="hero" aria-roledescription="carousel" aria-label="Banner promosi">
+      <div
+        className="hero-viewport"
+        ref={trackRef}
+        tabIndex={0}
+        role="group"
+        aria-roledescription="slide"
+        aria-label={`Slide ${index + 1} dari ${count}: ${promos[index].movie.title}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onKeyDown={onKeyDown}
+      >
+        <div
+          className={`hero-track${dragging ? " dragging" : ""}`}
+          style={{ transform: `translateX(calc(-${index * 100}% + ${dragging ? dragOffset : 0}px))` }}
+        >
+          {promos.map((promo, i) => (
+            <article className="hero-slide" key={promo.movie.id} aria-hidden={i !== index}>
+              <div className="hero-copy">
+                <span className="pill yellow">{promo.pill}</span>
+                <h1>
+                  {promo.headline[0]}
+                  <br />
+                  {promo.headline[1]}
+                </h1>
+                <p>{promo.blurb}</p>
+                <button
+                  className="hero-cta"
+                  onClick={() => openDetail(promo.movie)}
+                  tabIndex={i === index ? 0 : -1}
+                >
+                  {promo.cta}
+                </button>
+              </div>
+              <img src={promo.movie.image} alt={`Poster ${promo.movie.title}`} draggable={false} />
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <button className="hero-arrow prev" onClick={() => goTo(index - 1)} aria-label="Banner sebelumnya">
+        ‹
+      </button>
+      <button className="hero-arrow next" onClick={() => goTo(index + 1)} aria-label="Banner berikutnya">
+        ›
+      </button>
+
+      <div className="hero-dots" role="tablist" aria-label="Pilih banner">
+        {promos.map((promo, i) => (
+          <button
+            key={promo.movie.id}
+            role="tab"
+            aria-selected={i === index}
+            aria-label={promo.movie.title}
+            className={i === index ? "active" : ""}
+            onClick={() => goTo(i)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Home({
   watchlist,
   toggleWatchlist,
@@ -332,15 +503,7 @@ function Home({
         <div><Icon name="pin" /><span>Lokasi kamu</span><strong>Surabaya</strong></div>
         <button>Ganti lokasi</button>
       </section>
-      <button className="hero" onClick={() => openDetail(movies[0])}>
-        <div className="hero-copy">
-          <span className="pill yellow">PRE-SALE SUDAH DIBUKA</span>
-          <h1>Cerita yang dekat,<br />di layar yang besar.</h1>
-          <p>Tunggu Aku Sukses Nanti segera tayang. Amankan kursimu sekarang.</p>
-          <span className="hero-cta">Lihat jadwal</span>
-        </div>
-        <img src={`${A}/2860f.png`} alt="Poster Tunggu Aku Sukses Nanti" />
-      </button>
+      <PromoBanner openDetail={openDetail} />
       <section className="section-heading">
         <div>
           <span className="eyebrow">{filter === "Watchlist" ? "WATCHLIST SAYA" : "PILIHAN MINGGU INI"}</span>

@@ -60,16 +60,30 @@ h1, h2, h3, p { margin-top: 0; }
 .location-row span { color: var(--muted); font-size: 11px; }
 .location-row strong { font-size: 14px; }
 .location-row button, .section-heading button { border: 0; color: var(--blue); background: none; cursor: pointer; font-weight: 700; }
-.hero { position: relative; width: 100%; height: 340px; overflow: hidden; border: 0; border-radius: 22px; color: #fff; background: radial-gradient(circle at 76% 35%, #47545d 0, #22292d 34%, #111 75%); cursor: pointer; text-align: left; }
-.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.8), transparent 70%); }
+.hero { position: relative; width: 100%; height: 340px; overflow: hidden; border: 0; border-radius: 22px; color: #fff; background: radial-gradient(circle at 76% 35%, #47545d 0, #22292d 34%, #111 75%); }
+.hero-viewport { position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden; touch-action: pan-y; cursor: grab; outline-offset: -4px; }
+.hero-viewport:active { cursor: grabbing; }
+.hero-track { display: flex; width: 100%; height: 100%; transition: transform .45s cubic-bezier(.22,.61,.36,1); will-change: transform; }
+.hero-track.dragging { transition: none; }
+.hero-slide { position: relative; flex: 0 0 100%; min-width: 100%; height: 100%; }
+.hero-slide::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.8), transparent 70%); pointer-events: none; }
 .hero-copy { position: relative; z-index: 2; width: 58%; padding: 46px; }
 .hero h1 { margin: 18px 0 10px; font: 400 clamp(31px, 4vw, 50px)/1.05 "Inter", serif; }
 .hero p { max-width: 470px; color: #d2d4d5; line-height: 1.55; }
-.hero img { position: absolute; z-index: 1; right: 5%; bottom: -64%; width: 34%; min-width: 270px; transform: rotate(7deg); border-radius: 14px; box-shadow: -20px 20px 50px #000; }
+.hero-slide img { position: absolute; z-index: 1; right: 5%; bottom: -64%; width: 34%; min-width: 270px; transform: rotate(7deg); border-radius: 14px; box-shadow: -20px 20px 50px #000; -webkit-user-drag: none; user-select: none; }
+.hero-arrow { position: absolute; z-index: 3; top: 50%; display: grid; place-items: center; width: 38px; height: 38px; padding: 0 0 4px; border: 1px solid rgba(255,255,255,.28); border-radius: 50%; color: #fff; background: rgba(0,0,0,.34); backdrop-filter: blur(6px); font-size: 26px; line-height: 1; cursor: pointer; transform: translateY(-50%); transition: background .18s, border-color .18s; }
+.hero-arrow:hover { background: rgba(0,0,0,.62); border-color: rgba(255,255,255,.5); }
+.hero-arrow.prev { left: 8px; }
+.hero-arrow.next { right: 8px; }
+.hero-dots { position: absolute; z-index: 3; left: 46px; bottom: 22px; display: flex; gap: 8px; }
+.hero-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.34); cursor: pointer; transition: background .18s, width .18s; }
+.hero-dots button:hover { background: rgba(255,255,255,.6); }
+.hero-dots button.active { width: 22px; border-radius: 6px; background: var(--yellow); }
 .pill { display: inline-flex; align-items: center; min-height: 23px; padding: 0 9px; border-radius: 20px; font: 700 9px "Inter"; letter-spacing: .08em; }
 .pill.yellow { color: #171717; background: var(--yellow); }
 .pill.blue { color: #082131; background: #74d8fa; }
-.hero-cta { display: inline-flex; margin-top: 8px; padding-bottom: 3px; border-bottom: 1px solid #fff; font-weight: 700; }
+.hero-cta { display: inline-flex; margin-top: 8px; padding: 0 0 3px; border: 0; border-bottom: 1px solid #fff; color: inherit; background: none; font: inherit; font-weight: 700; cursor: pointer; }
+.hero-cta:hover { opacity: .8; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; margin: 48px 0 22px; }
 .section-heading h1, .section-heading h2 { margin: 0; font: 400 28px "Inter", serif; }
 .section-heading.compact { margin-top: 0; }
@@ -324,7 +338,9 @@ h1, h2, h3, p { margin-top: 0; }
   .hero-copy { width: 75%; padding: 28px 24px; }
   .hero h1 { font-size: 33px; }
   .hero p { font-size: 12px; }
-  .hero img { right: -16%; bottom: -30%; width: 55%; min-width: 220px; opacity: .72; }
+  .hero-slide img { right: -16%; bottom: -30%; width: 55%; min-width: 220px; opacity: .72; }
+  .hero-arrow { display: none; }
+  .hero-dots { left: 24px; bottom: 16px; }
   .section-heading { margin-top: 36px; }
   .movie-grid { gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; grid-template-columns: repeat(3, 44vw); margin-right: -16px; padding-right: 16px; }
   .movie-card { scroll-snap-align: start; }
